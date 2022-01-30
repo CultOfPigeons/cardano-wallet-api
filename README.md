@@ -1,3 +1,6 @@
+Many thanks to Felippo001 for creating nami-wallet-api.
+
+
 **Install**
 
 ```bash
