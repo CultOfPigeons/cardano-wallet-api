@@ -82,7 +82,7 @@ type Auxiliary = {
 
 
 const ERROR = {
-    FAILED_PROTOCOL_PARAMETER: 'Couldnt fetch protocol parameters from blockfrost',
+    FAILED_PROTOCOL_PARAMETER: 'NO PROTOCOL PARAMS PASSED',
     TX_TOO_BIG: 'Transaction too big'
 }
 
@@ -91,7 +91,6 @@ export async function NamiWalletApi(NamiWalletObject: any, protocolParameterObje
 
     const Buffer = (await import('buffer')).Buffer
     const Nami = NamiWalletObject
-    const fetch = (await import('node-fetch')).default || window.fetch
     const protocolParameter = protocolParameterObject;
 
     const CoinSelection = (await import('./coinSelection')).default
