@@ -10,7 +10,12 @@
     "build": "tsc -p . && npm publish"
   },
   "homepage": "https://github.com/Felippo001/nami-wallet-api#README.md",
-  "keywords": ["cardano", "nami", "wallet", "serialization-lib"],
+  "keywords": [
+    "cardano",
+    "nami",
+    "wallet",
+    "serialization-lib"
+  ],
   "author": "Backi",
   "license": "ISC",
   "devDependencies": {
