@@ -1,5 +1,4 @@
 import { Buffer } from 'buffer';
-
 declare type Endpoints = {
     isEnabled: () => Promise<boolean>;
     enable: () => Promise<void>;
@@ -63,6 +62,6 @@ declare type Auxiliary = {
     BufferToAscii: (buffer: Buffer) => string;
     BufferToHex: (buffer: Buffer) => string;
 };
-declare function NamiWalletApi(NamiWalletObject: any, protocolParameterObject: ProtocolParameter, serializationLib?: any): Promise<Endpoints>;
-
-export { NamiWalletApi };
+export declare function NamiWalletApi(NamiWalletObject: any, protocolParameterObject: ProtocolParameter, serializationLib?: any): Promise<Endpoints>;
+export {};
+//# sourceMappingURL=index.d.ts.map
