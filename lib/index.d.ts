@@ -15,13 +15,7 @@ declare type Endpoints = {
     getUtxosHex: () => Promise<string[]>;
     send: (data: Send) => Promise<string>;
     sendMultiple: (data: SendMultiple) => Promise<string>;
-    delegate: (data: Delegate) => Promise<string>;
     auxiliary: Auxiliary;
-};
-declare type Delegate = {
-    poolId: string;
-    metadata?: any;
-    metadataLabel?: string;
 };
 declare type Utxo = {
     txHash: string;
@@ -48,6 +42,17 @@ declare type SendMultiple = {
     metadata?: any;
     metadataLabel?: string;
 };
+declare type ProtocolParameter = {
+    linearFee: {
+        minFeeA: string;
+        minFeeB: string;
+    };
+    minUtxo: '1000000';
+    poolDeposit: string;
+    keyDeposit: string;
+    maxTxSize: number;
+    slot: number;
+};
 declare type Auxiliary = {
     Buffer: object;
     AsciiToBuffer: (string: string) => Buffer;
@@ -57,6 +62,6 @@ declare type Auxiliary = {
     BufferToAscii: (buffer: Buffer) => string;
     BufferToHex: (buffer: Buffer) => string;
 };
-export declare function NamiWalletApi(NamiWalletObject: any, blockfrostApiKey: string, serializationLib?: any): Promise<Endpoints>;
+export declare function NamiWalletApi(NamiWalletObject: any, protocolParameterObject: ProtocolParameter, serializationLib?: any): Promise<Endpoints>;
 export {};
 //# sourceMappingURL=index.d.ts.map
