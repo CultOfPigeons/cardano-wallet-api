@@ -2,11 +2,11 @@ export default CoinSelection;
 /**
  * - List of 'Value' object
  */
-export type AmountList = Value[];
+export type AmountList = any[];
 /**
  * - List of UTxO
  */
-export type UTxOList = TransactionUnspentOutput[];
+export type UTxOList = any[];
 /**
  * - Coin Selection algorithm core object
  */
@@ -26,7 +26,7 @@ export type UTxOSelection = {
     /**
      * - UTxO amount of each requested token
      */
-    amount: Value;
+    amount: any;
 };
 /**
  * - ImproveRange
@@ -35,11 +35,11 @@ export type ImproveRange = {
     /**
      * - Requested amount * 2
      */
-    ideal: Value;
+    ideal: any;
     /**
      * - Requested amount * 3
      */
-    maximum: Value;
+    maximum: any;
 };
 /**
  * - Coin Selection algorithm return
@@ -52,7 +52,7 @@ export type SelectionResult = {
     /**
      * - Requested outputs.
      */
-    output: OutputList;
+    output: any;
     /**
      * - Remaining UTxO set.
      */
@@ -60,21 +60,21 @@ export type SelectionResult = {
     /**
      * - UTxO amount of each requested token
      */
-    amount: Value;
+    amount: any;
     /**
      * - Accumulated change amount.
      */
-    change: Value;
+    change: any;
 };
 export type ProtocolParameters = {
-    minUTxO: int;
-    minFeeA: int;
-    minFeeB: int;
-    maxTxSize: int;
+    minUTxO: any;
+    minFeeA: any;
+    minFeeB: any;
+    maxTxSize: any;
 };
 declare namespace CoinSelection {
     function setLoader(lib: any): void;
     function setProtocolParameters(minUTxO: any, minFeeA: any, minFeeB: any, maxTxSize: any): void;
-    function randomImprove(inputs: UTxOList, outputs: TransactionOutputs, limit: int): SelectionResult;
+    function randomImprove(inputs: UTxOList, outputs: any, limit: any): SelectionResult;
 }
 //# sourceMappingURL=coinSelection.d.ts.map
