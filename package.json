@@ -1,7 +1,7 @@
 {
-  "name": "cop-nami-wallet-api",
+  "name": "cardano-wallet-api",
   "version": "1.0.0",
-  "description": "Library for nami wallet",
+  "description": "Library for dApp integrations of cardano lightwallets",
   "main": "lib/index.js",
   "types": "lib",
   "scripts": {
@@ -14,7 +14,7 @@
     "wallet",
     "serialization-lib"
   ],
-  "author": "Backi",
+  "author": "TQ",
   "license": "ISC",
   "devDependencies": {
     "@types/node-fetch": "^3.0.3",
@@ -22,7 +22,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/CultOfPigeons/cult-of-pigeons-nami-wallet-api.git"
+    "url": "https://github.com/CultOfPigeons/cardano-wallet-api.git"
   },
   "dependencies": {
     "@emurgo/cardano-serialization-lib-asmjs": "^9.0.0",
