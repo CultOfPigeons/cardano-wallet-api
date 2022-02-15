@@ -67,5 +67,5 @@ declare enum WalletType {
     CCVAULT = 1
 }
 export declare function WalletApi(walletObject: any, protocolParameterObject: ProtocolParameter, type: WalletType, serializationLib?: any): Promise<Endpoints>;
-export {};
+export { WalletType };
 //# sourceMappingURL=index.d.ts.map

@@ -81,7 +81,7 @@ const ERROR = {
     TX_TOO_BIG: 'Transaction too big'
 }
 
-export async function WalletApi(walletObject: any, protocolParameterObject: ProtocolParameter, type: WalletType, serializationLib?: any, ) : Promise<Endpoints> {
+export async function WalletApi(walletObject: any, protocolParameterObject: ProtocolParameter, type: WalletType, serializationLib?: any) : Promise<Endpoints> {
     const serialize = serializationLib || await import('@emurgo/cardano-serialization-lib-asmjs')
 
     const Buffer = (await import('buffer')).Buffer
@@ -639,3 +639,5 @@ export async function WalletApi(walletObject: any, protocolParameterObject: Prot
         }
     }
 }
+
+export { WalletType };
