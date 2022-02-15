@@ -17,15 +17,8 @@ type Endpoints = {
     getUtxosHex: () => Promise<string[]>,
     send: (data: Send) => Promise<string>,
     sendMultiple: (data: SendMultiple) => Promise<string>,
-    // delegate: (data: Delegate) => Promise<string>,
 
     auxiliary: Auxiliary
-}
-
-type Delegate = {
-    poolId: string,
-    metadata?: any,
-    metadataLabel?: string
 }
 
 type Utxo = {
@@ -38,7 +31,6 @@ type Asset = {
     unit: string,
     quantity: string
 }
-
 
 type Send = {
     address: string,
@@ -79,30 +71,44 @@ type Auxiliary = {
     BufferToAscii: (buffer : Buffer) => string,
     BufferToHex: (buffer : Buffer) => string,
 }
-
+enum WalletType {
+  NAMI,
+  CCVAULT,
+}
 
 const ERROR = {
     FAILED_PROTOCOL_PARAMETER: 'NO PROTOCOL PARAMS PASSED',
     TX_TOO_BIG: 'Transaction too big'
 }
 
-export async function NamiWalletApi(NamiWalletObject: any, protocolParameterObject: ProtocolParameter, serializationLib?: any) : Promise<Endpoints> {
-    const S = serializationLib || await import('@emurgo/cardano-serialization-lib-asmjs')
+export async function WalletApi(walletObject: any, protocolParameterObject: ProtocolParameter, type: WalletType, serializationLib?: any, ) : Promise<Endpoints> {
+    const serialize = serializationLib || await import('@emurgo/cardano-serialization-lib-asmjs')
 
     const Buffer = (await import('buffer')).Buffer
-    const Nami = NamiWalletObject
+    const wallet = walletObject;
     const protocolParameter = protocolParameterObject;
 
     const CoinSelection = (await import('./coinSelection')).default
 
+    const typeOfwallet = (type: WalletType) => {
+        const walletObject = {
+            [WalletType.NAMI]: wallet.nami,
+            [WalletType.CCVAULT]: wallet.ccvault
+        }
+
+        return walletObject[type];
+    };
+
+    const selectedWallet = typeOfwallet(type);
+
     async function isEnabled() : Promise<boolean>{
-        return await Nami.isEnabled()
+        return await selectedWallet.isEnabled()
     }
 
     async function enable() : Promise<void>{
         if(!await isEnabled()) {
             try {
-                await Nami.enable()
+                await selectedWallet.enable()
             } catch (error) {
                 throw error
             }
@@ -110,7 +116,7 @@ export async function NamiWalletApi(NamiWalletObject: any, protocolParameterObje
     }
 
     async function getAddress() : Promise<string>{
-        return S.Address.from_bytes(
+        return serialize.Address.from_bytes(
             Buffer.from(
                 await getAddressHex(),
                 'hex'
@@ -119,12 +125,12 @@ export async function NamiWalletApi(NamiWalletObject: any, protocolParameterObje
     }
 
     async function getAddressHex() : Promise<string>{
-        return await Nami.getChangeAddress()
+        return await wallet.getChangeAddress()
     }
 
     async function getRewardAddress() : Promise<string>{
-        return S.RewardAddress.from_address(
-            S.Address.from_bytes(
+        return serialize.RewardAddress.from_address(
+            serialize.Address.from_bytes(
                 Buffer.from(
                     await getRewardAddressHex(),
                     'hex'
@@ -134,11 +140,11 @@ export async function NamiWalletApi(NamiWalletObject: any, protocolParameterObje
     }
 
     async function getRewardAddressHex() : Promise<string> {
-        return await Nami.getRewardAddress()
+        return await wallet.getRewardAddress()
     }
 
     async function getNetworkId() : Promise<{id: number, network: string}>{
-        let networkId = await Nami.getNetworkId()
+        let networkId = await wallet.getNetworkId()
         return {
             id: networkId,
             network: networkId == 1 ? 'mainnet' : 'testnet'
@@ -146,7 +152,7 @@ export async function NamiWalletApi(NamiWalletObject: any, protocolParameterObje
     }
 
     async function getUtxos() : Promise<Utxo[]> {
-        let Utxos = (await getUtxosHex()).map(u => S.TransactionUnspentOutput.from_bytes(
+        let Utxos = (await getUtxosHex()).map(u => serialize.TransactionUnspentOutput.from_bytes(
                 Buffer.from(
                     u,
                     'hex'
@@ -185,17 +191,14 @@ export async function NamiWalletApi(NamiWalletObject: any, protocolParameterObje
         return Object.keys(AssetsMap).map(k => ({unit: k, quantity: AssetsMap[k].toString()}))
     }
 
-
-
     async function getUtxosHex() : Promise<string[]> {
-        return await Nami.getUtxos()
+        return await wallet.getUtxos()
     }
-
 
     async function send({address, amount = 0, assets = [], metadata = null, metadataLabel = '721'} : Send) : Promise<string> {
         let PaymentAddress = await getAddress()
 
-        let utxos = (await getUtxosHex()).map(u => S.TransactionUnspentOutput.from_bytes(
+        let utxos = (await getUtxosHex()).map(u => serialize.TransactionUnspentOutput.from_bytes(
             Buffer.from(
                 u,
                 'hex'
@@ -209,23 +212,23 @@ export async function NamiWalletApi(NamiWalletObject: any, protocolParameterObje
 
         let multiAsset = _makeMultiAsset(assets)
 
-        let outputValue = S.Value.new(
-            S.BigNum.from_str(lovelace)
+        let outputValue = serialize.Value.new(
+            serialize.BigNum.from_str(lovelace)
         )
 
         if(assets.length > 0)outputValue.set_multiasset(multiAsset)
 
-        let minAda = S.min_ada_required(
+        let minAda = serialize.min_ada_required(
             outputValue,
-            S.BigNum.from_str(protocolParameter.minUtxo || "1000000")
+            serialize.BigNum.from_str(protocolParameter.minUtxo || "1000000")
         )
-        if(S.BigNum.from_str(lovelace).compare(minAda) < 0)outputValue.set_coin(minAda)
+        if(serialize.BigNum.from_str(lovelace).compare(minAda) < 0)outputValue.set_coin(minAda)
 
 
-        let outputs = S.TransactionOutputs.new()
+        let outputs = serialize.TransactionOutputs.new()
         outputs.add(
-            S.TransactionOutput.new(
-                S.Address.from_bech32(ReceiveAddress),
+            serialize.TransactionOutput.new(
+                serialize.Address.from_bech32(ReceiveAddress),
                 outputValue
             )
         )
@@ -246,36 +249,36 @@ export async function NamiWalletApi(NamiWalletObject: any, protocolParameterObje
     async function sendMultiple({recipients = [], metadata = null, metadataLabel = '721'}: SendMultiple) : Promise<string> {
         let PaymentAddress = await getAddress()
 
-        let utxos = (await getUtxosHex()).map(u => S.TransactionUnspentOutput.from_bytes(
+        let utxos = (await getUtxosHex()).map(u => serialize.TransactionUnspentOutput.from_bytes(
             Buffer.from(
                 u,
                 'hex'
             )
         ))
 
-        let outputs = S.TransactionOutputs.new()
+        let outputs = serialize.TransactionOutputs.new()
 
         for (let recipient of recipients){
             let lovelace = Math.floor((recipient.amount || 0) * 1000000).toString()
             let ReceiveAddress = recipient.address
             let multiAsset = _makeMultiAsset(recipient.assets || [])
 
-            let outputValue = S.Value.new(
-                S.BigNum.from_str(lovelace)
+            let outputValue = serialize.Value.new(
+                serialize.BigNum.from_str(lovelace)
             )
 
             if((recipient.assets || []).length > 0) outputValue.set_multiasset(multiAsset)
 
-            let minAda = S.min_ada_required(
+            let minAda = serialize.min_ada_required(
                 outputValue,
-                S.BigNum.from_str(protocolParameter.minUtxo || "1000000")
+                serialize.BigNum.from_str(protocolParameter.minUtxo || "1000000")
             )
-            if(S.BigNum.from_str(lovelace).compare(minAda) < 0)outputValue.set_coin(minAda)
+            if(serialize.BigNum.from_str(lovelace).compare(minAda) < 0)outputValue.set_coin(minAda)
 
 
             outputs.add(
-                S.TransactionOutput.new(
-                    S.Address.from_bech32(ReceiveAddress),
+                serialize.TransactionOutput.new(
+                    serialize.Address.from_bech32(ReceiveAddress),
                     outputValue
                 )
             )
@@ -294,68 +297,9 @@ export async function NamiWalletApi(NamiWalletObject: any, protocolParameterObje
         return await _signSubmitTx(RawTransaction)
     }
 
-    // async function delegate({poolId, metadata = null, metadataLabel = '721'} : Delegate) : Promise<string>{
-
-    //     let stakeKeyHash = S.RewardAddress.from_address(
-    //         S.Address.from_bytes(
-    //             Buffer.from(
-    //                 await getRewardAddressHex(),
-    //                 'hex'
-    //             )
-    //         )
-    //     ).payment_cred().to_keyhash().to_bytes()
-
-    //     let delegation = await getDelegation(await getRewardAddress())
-
-    //     async function getDelegation(rewardAddr: string) : Promise<any>{
-    //         let stake = await _blockfrostRequest(`/accounts/${rewardAddr}`)
-    //         if(!stake || stake.error || !stake.pool_id) return {}
-
-    //         return {
-    //             active: stake.active,
-    //             rewards: stake.withdrawable_amount,
-    //             poolId: stake.pool_id,
-    //         }
-    //     }
-
-    //     let pool = await _blockfrostRequest(`/pools/${poolId}`)
-    //     let poolHex = pool.hex
-
-    //     let utxos = (await getUtxosHex()).map(u => S.TransactionUnspentOutput.from_bytes(Buffer.from(u, 'hex')))
-    //     let PaymentAddress = await getAddress()
-
-    //     let outputs = S.TransactionOutputs.new()
-    //     outputs.add(
-    //         S.TransactionOutput.new(
-    //           S.Address.from_bech32(PaymentAddress),
-    //           S.Value.new(
-    //               S.BigNum.from_str(protocolParameter.keyDeposit)
-    //           )
-    //         )
-    //     )
-
-    //     let transaction = _txBuilder({
-    //         PaymentAddress,
-    //         Utxos: utxos,
-    //         ProtocolParameter: protocolParameter,
-    //         Outputs: outputs,
-    //         Delegation: {
-    //             poolHex: poolHex,
-    //             stakeKeyHash: stakeKeyHash,
-    //             delegation: delegation
-    //         },
-    //         Metadata: metadata,
-    //         MetadataLabel: metadataLabel
-    //     })
-
-    //     let txHash = await _signSubmitTx(transaction)
-
-    //     return txHash
-    // }
-
     async function signData(string : string) : Promise<string> {
         let address = await getAddressHex()
-        let coseSign1Hex = await Nami.signData(
+        let coseSign1Hex = await wallet.signData(
             address,
             Buffer.from(
                 string,
@@ -392,8 +336,6 @@ export async function NamiWalletApi(NamiWalletObject: any, protocolParameterObje
         return buffer.toString("hex")
     }
 
-
-
     //////////////////////////////////////////////////
 
     function _makeMultiAsset(assets : Asset[]) : MultiAsset{
@@ -410,19 +352,19 @@ export async function NamiWalletApi(NamiWalletObject: any, protocolParameterObje
             })
 
         }
-        let multiAsset = S.MultiAsset.new()
+        let multiAsset = serialize.MultiAsset.new()
         for(const policy in AssetsMap){
 
-            const ScriptHash = S.ScriptHash.from_bytes(
+            const ScriptHash = serialize.ScriptHash.from_bytes(
                 Buffer.from(policy,'hex')
             )
-            const Assets = S.Assets.new()
+            const Assets = serialize.Assets.new()
 
             const _assets = AssetsMap[policy]
 
             for(const asset of _assets){
-                const AssetName = S.AssetName.new(Buffer.from(asset.unit,'hex'))
-                const BigNum = S.BigNum.from_str(asset.quantity)
+                const AssetName = serialize.AssetName.new(Buffer.from(asset.unit,'hex'))
+                const BigNum = serialize.BigNum.from_str(asset.quantity)
 
                 Assets.insert(AssetName, BigNum)
             }
@@ -483,7 +425,7 @@ export async function NamiWalletApi(NamiWalletObject: any, protocolParameterObje
         const MULTIASSET_SIZE = 5000;
         const VALUE_SIZE = 5000;
         const totalAssets = 0
-        CoinSelection.setLoader(S)
+        CoinSelection.setLoader(serialize)
         CoinSelection.setProtocolParameters(
             ProtocolParameter.minUtxo.toString(),
             ProtocolParameter.linearFee.minFeeA.toString(),
@@ -497,14 +439,14 @@ export async function NamiWalletApi(NamiWalletObject: any, protocolParameterObje
             //ProtocolParameter.minUtxo.to_str()
         )
         const inputs = selection.input;
-        const txBuilder = S.TransactionBuilder.new(
-            S.LinearFee.new(
-                S.BigNum.from_str(ProtocolParameter.linearFee.minFeeA),
-                S.BigNum.from_str(ProtocolParameter.linearFee.minFeeB)
+        const txBuilder = serialize.TransactionBuilder.new(
+            serialize.LinearFee.new(
+                serialize.BigNum.from_str(ProtocolParameter.linearFee.minFeeA),
+                serialize.BigNum.from_str(ProtocolParameter.linearFee.minFeeB)
             ),
-            S.BigNum.from_str(ProtocolParameter.minUtxo.toString()),
-            S.BigNum.from_str(ProtocolParameter.poolDeposit.toString()),
-            S.BigNum.from_str(ProtocolParameter.keyDeposit.toString()),
+            serialize.BigNum.from_str(ProtocolParameter.minUtxo.toString()),
+            serialize.BigNum.from_str(ProtocolParameter.poolDeposit.toString()),
+            serialize.BigNum.from_str(ProtocolParameter.keyDeposit.toString()),
             MULTIASSET_SIZE,
             MULTIASSET_SIZE
         );
@@ -519,13 +461,13 @@ export async function NamiWalletApi(NamiWalletObject: any, protocolParameterObje
         }
 
         if(Delegation){
-            let certificates = S.Certificates.new();
+            let certificates = serialize.Certificates.new();
             if (!Delegation.delegation.active){
                 certificates.add(
-                    S.Certificate.new_stake_registration(
-                        S.StakeRegistration.new(
-                            S.StakeCredential.from_keyhash(
-                                S.Ed25519KeyHash.from_bytes(
+                    serialize.Certificate.new_stake_registration(
+                        serialize.StakeRegistration.new(
+                            serialize.StakeCredential.from_keyhash(
+                                serialize.Ed25519KeyHash.from_bytes(
                                     Buffer.from(Delegation.stakeKeyHash, 'hex')
                                 )
                             )
@@ -536,14 +478,14 @@ export async function NamiWalletApi(NamiWalletObject: any, protocolParameterObje
 
             let poolKeyHash = Delegation.poolHex
             certificates.add(
-                S.Certificate.new_stake_delegation(
-                  S.StakeDelegation.new(
-                    S.StakeCredential.from_keyhash(
-                      S.Ed25519KeyHash.from_bytes(
+                serialize.Certificate.new_stake_delegation(
+                  serialize.StakeDelegation.new(
+                    serialize.StakeCredential.from_keyhash(
+                      serialize.Ed25519KeyHash.from_bytes(
                         Buffer.from(Delegation.stakeKeyHash, 'hex')
                       )
                     ),
-                    S.Ed25519KeyHash.from_bytes(
+                    serialize.Ed25519KeyHash.from_bytes(
                       Buffer.from(poolKeyHash, 'hex')
                     )
                   )
@@ -555,17 +497,17 @@ export async function NamiWalletApi(NamiWalletObject: any, protocolParameterObje
 
         let AUXILIARY_DATA
         if(Metadata){
-            let METADATA = S.GeneralTransactionMetadata.new()
+            let METADATA = serialize.GeneralTransactionMetadata.new()
             METADATA.insert(
-                S.BigNum.from_str(MetadataLabel),
-                S.encode_json_str_to_metadatum(
+                serialize.BigNum.from_str(MetadataLabel),
+                serialize.encode_json_str_to_metadatum(
                     JSON.stringify(Metadata),
                     0
                 )
             )
-            AUXILIARY_DATA = S.AuxiliaryData.new()
+            AUXILIARY_DATA = serialize.AuxiliaryData.new()
             AUXILIARY_DATA.set_metadata(METADATA)
-            //const auxiliaryDataHash = S.hash_auxiliary_data(AUXILIARY_DATA)
+            //const auxiliaryDataHash = serialize.hash_auxiliary_data(AUXILIARY_DATA)
             txBuilder.set_auxiliary_data(AUXILIARY_DATA)
         }
 
@@ -578,29 +520,29 @@ export async function NamiWalletApi(NamiWalletObject: any, protocolParameterObje
         const changeMultiAssets = change.multiasset();
         // check if change value is too big for single output
         if (changeMultiAssets && change.to_bytes().length * 2 > VALUE_SIZE) {
-            const partialChange = S.Value.new(
-                S.BigNum.from_str('0')
+            const partialChange = serialize.Value.new(
+                serialize.BigNum.from_str('0')
             );
 
-            const partialMultiAssets = S.MultiAsset.new();
+            const partialMultiAssets = serialize.MultiAsset.new();
             const policies = changeMultiAssets.keys();
             const makeSplit = () => {
                 for (let j = 0; j < changeMultiAssets.len(); j++) {
                   const policy = policies.get(j);
                   const policyAssets = changeMultiAssets.get(policy);
                   const assetNames = policyAssets.keys();
-                  const assets = S.Assets.new();
+                  const assets = serialize.Assets.new();
                   for (let k = 0; k < assetNames.len(); k++) {
                     const policyAsset = assetNames.get(k);
                     const quantity = policyAssets.get(policyAsset);
                     assets.insert(policyAsset, quantity);
                     //check size
-                    const checkMultiAssets = S.MultiAsset.from_bytes(
+                    const checkMultiAssets = serialize.MultiAsset.from_bytes(
                       partialMultiAssets.to_bytes()
                     );
                     checkMultiAssets.insert(policy, assets);
-                    const checkValue = S.Value.new(
-                      S.BigNum.from_str('0')
+                    const checkValue = serialize.Value.new(
+                      serialize.BigNum.from_str('0')
                     );
                     checkValue.set_multiasset(checkMultiAssets);
                     if (
@@ -618,25 +560,25 @@ export async function NamiWalletApi(NamiWalletObject: any, protocolParameterObje
             makeSplit();
             partialChange.set_multiasset(partialMultiAssets);
 
-            const minAda = S.min_ada_required(
+            const minAda = serialize.min_ada_required(
                 partialChange,
-                S.BigNum.from_str(ProtocolParameter.minUtxo)
+                serialize.BigNum.from_str(ProtocolParameter.minUtxo)
             );
             partialChange.set_coin(minAda);
 
             txBuilder.add_output(
-                S.TransactionOutput.new(
-                S.Address.from_bech32(PaymentAddress),
+                serialize.TransactionOutput.new(
+                serialize.Address.from_bech32(PaymentAddress),
                 partialChange
                 )
             );
         }
         txBuilder.add_change_if_needed(
-            S.Address.from_bech32(PaymentAddress)
+            serialize.Address.from_bech32(PaymentAddress)
         );
-        const transaction = S.Transaction.new(
+        const transaction = serialize.Transaction.new(
             txBuilder.build(),
-            S.TransactionWitnessSet.new(),
+            serialize.TransactionWitnessSet.new(),
             AUXILIARY_DATA
         )
 
@@ -647,16 +589,16 @@ export async function NamiWalletApi(NamiWalletObject: any, protocolParameterObje
     }
 
     async function _signSubmitTx(transactionRaw : Uint8Array) : Promise<string>{
-        let transaction = S.Transaction.from_bytes(transactionRaw)
-        const witneses = await Nami.signTx(
+        let transaction = serialize.Transaction.from_bytes(transactionRaw)
+        const witneses = await wallet.signTx(
             Buffer.from(
                 transaction.to_bytes()
             ).toString('hex')
         )
 
-        const signedTx = S.Transaction.new(
+        const signedTx = serialize.Transaction.new(
             transaction.body(),
-            S.TransactionWitnessSet.from_bytes(
+            serialize.TransactionWitnessSet.from_bytes(
                 Buffer.from(
                     witneses,
                     "hex"
@@ -665,7 +607,7 @@ export async function NamiWalletApi(NamiWalletObject: any, protocolParameterObje
             transaction.auxiliary_data()
         )
 
-        const txhash = await Nami.submitTx(
+        const txhash = await wallet.submitTx(
             Buffer.from(
                 signedTx.to_bytes()
             ).toString('hex')
@@ -697,7 +639,3 @@ export async function NamiWalletApi(NamiWalletObject: any, protocolParameterObje
         }
     }
 }
-
-
-
-

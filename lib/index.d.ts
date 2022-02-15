@@ -62,6 +62,10 @@ declare type Auxiliary = {
     BufferToAscii: (buffer: Buffer) => string;
     BufferToHex: (buffer: Buffer) => string;
 };
-export declare function NamiWalletApi(NamiWalletObject: any, protocolParameterObject: ProtocolParameter, serializationLib?: any): Promise<Endpoints>;
+declare enum WalletType {
+    NAMI = 0,
+    CCVAULT = 1
+}
+export declare function WalletApi(walletObject: any, protocolParameterObject: ProtocolParameter, type: WalletType, serializationLib?: any): Promise<Endpoints>;
 export {};
 //# sourceMappingURL=index.d.ts.map
